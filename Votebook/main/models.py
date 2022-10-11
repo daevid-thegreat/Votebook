@@ -58,20 +58,23 @@ class User(AbstractBaseUser, PermissionsMixin):
         return self.email
 
 class Subject(models.Model):
-    id_subject = models.CharField(default=uuid.uuid4)
+    id_subject = models.CharField(default=uuid.uuid4, max_length=255)
     creator = models.ForeignKey(User, on_delete=models.CASCADE)
     title = models.CharField(max_length=100)
-    description = models.CharField(_MAX_LENGTH= 255)
-    total_votes = models.IntegerField(default=0)
-    options = models.ManyToOneRel(options)
+    description = models.CharField(max_length= 255)
 
 
     def __str__(self):
         return self.party_name
 
+    @property
+    def total_votes(self):
+        total = self.options.aggregate(models.Sum('votes'))['votes__sum']
+        return total
+
 class Option(models.Model):
     subject = models.ForeignKey(Subject, on_delete = models.CASCADE)
-    option_name = models.CharField(_MAX_LENGTH= 150)
+    option_name = models.CharField(max_length= 150)
     votes = models.BigIntegerField()
 
     def __str__(self):

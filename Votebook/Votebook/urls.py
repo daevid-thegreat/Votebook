@@ -24,7 +24,7 @@ urlpatterns = [
     path('api-auth/', include('rest_framework.urls')),
     path('api-token-auth/', authtoken_views.obtain_auth_token),
     path('api/', include('main.urls')),
-    path('parties/', views.party_list),
-    path('parties/<int:pk>/', views.party_detail),
+    path('parties/', views.subject_list),
+    path('parties/<int:pk>/', views.subject_detail),
     path('', include('main.urls')),
 ]
