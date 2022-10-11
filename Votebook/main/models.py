@@ -1,15 +1,16 @@
+from email.policy import default
 from secrets import choice
+from unittest.util import _MAX_LENGTH
 from django.db import models
 from django.contrib.auth.models import User, AbstractBaseUser, BaseUserManager, PermissionsMixin
+from requests import options
 from rest_framework.authtoken.models import Token
 from django.conf import settings
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from rest_framework.authtoken.models import Token
-
-# Create your models here.
-
-from REST_API.settings import AUTH_USER_MODEL
+import uuid
+from Votebook.settings import AUTH_USER_MODEL
 
 User = AUTH_USER_MODEL
 
@@ -28,18 +29,10 @@ class UserprofileManager(BaseUserManager):
 
         return user.email
 
-    def create_candidate(self, email, password, **other_fields ):
-        user = self.create_user(email, password, **other_fields)
-        user.is_candidate = True
-        user.save(using=self._db)
-
-        return user.email
-
     def create_superuser(self, email, password, **other_fields ):
         
         other_fields.setdefault('is_staff', True)
         other_fields.setdefault('is_superuser', True)
-        other_fields.setdefault('is_candidate', False)
 
         if other_fields.get('is_staff') is not True:
             raise ValueError('superuser must be assigned is_staff=True')
@@ -49,24 +42,14 @@ class UserprofileManager(BaseUserManager):
 
         return self.create_user(email, password, **other_fields)
 
-choices = [
-    ('President', 'President'),
-    ('Prime Minister', 'Prime Minister'),
-    ('Head of State', 'Head of State'),
-    ('Honorable', 'Honorable'),
-]
+
 
 class User(AbstractBaseUser, PermissionsMixin):
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, default="None")
     email = models.EmailField(verbose_name='email address', max_length=255, unique=True)
-    is_candidate = models.BooleanField(default=False)
     is_admin = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=False)
-    party = models.ForeignKey('Party', on_delete=models.CASCADE, null=True)
-    votes = models.IntegerField(default=0)
-    position = models.CharField(max_length=255, choices=choices, default='Honorable')
-
-
+    
     objects = UserprofileManager()
 
     USERNAME_FIELD = 'email'
@@ -74,11 +57,25 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.email
 
-class Party(models.Model):
-    party_name = models.CharField(max_length=100)
+class Subject(models.Model):
+    id_subject = models.CharField(default=uuid.uuid4)
+    creator = models.ForeignKey(User, on_delete=models.CASCADE)
+    title = models.CharField(max_length=100)
+    description = models.CharField(_MAX_LENGTH= 255)
+    total_votes = models.IntegerField(default=0)
+    options = models.ManyToOneRel(options)
+
 
     def __str__(self):
         return self.party_name
+
+class Option(models.Model):
+    subject = models.ForeignKey(Subject, on_delete = models.CASCADE)
+    option_name = models.CharField(_MAX_LENGTH= 150)
+    votes = models.BigIntegerField()
+
+    def __str__(self):
+        return self.subject
 
 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
